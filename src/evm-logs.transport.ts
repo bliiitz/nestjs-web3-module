@@ -1,8 +1,7 @@
 import { CustomTransportStrategy, MessageHandler, Server } from '@nestjs/microservices';
 
 import { Logger } from '@nestjs/common';
-import ethers from 'ethers';
-import { JsonRpcProvider } from 'ethers';
+import { JsonRpcProvider, Log, Interface } from 'ethers';
 
 export interface IndexerConfig {
     evmRpc: string
@@ -23,7 +22,7 @@ export interface SyncState {
 
 export class EVMLogsTransport extends Server implements CustomTransportStrategy {
 
-    rpc: ethers.JsonRpcProvider
+    rpc: JsonRpcProvider
     status: SyncState
 
     config: IndexerConfig
@@ -127,13 +126,13 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
         return loop
     }
 
-    async parseLogs(log: ethers.Log) {
+    async parseLogs(log: Log) {
         for (const contract of this.config.contracts) {
             if(log.address.toLowerCase() !== contract.address.toLowerCase())
                 continue
 
             let topics: string[] = log.topics.join(',').split(',')
-            let iface = new ethers.Interface(contract.abi);
+            let iface = new Interface(contract.abi);
             let logParsed = iface.parseLog({ topics: topics, data: log.data})
 
             const logHandler: MessageHandler | undefined = this.messageHandlers.get(`${contract.name}:${logParsed.name}`);

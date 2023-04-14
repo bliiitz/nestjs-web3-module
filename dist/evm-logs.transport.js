@@ -4,13 +4,12 @@ exports.EVMLogsTransport = void 0;
 const microservices_1 = require("@nestjs/microservices");
 const common_1 = require("@nestjs/common");
 const ethers_1 = require("ethers");
-const ethers_2 = require("ethers");
 class EVMLogsTransport extends microservices_1.Server {
     constructor(config) {
         super();
         this.logger = new common_1.Logger('EVMLogTransport');
         this.config = config;
-        this.rpc = new ethers_2.JsonRpcProvider(this.config.evmRpc);
+        this.rpc = new ethers_1.JsonRpcProvider(this.config.evmRpc);
     }
     async onMessage(messageChannel, ...args) {
         const handler = this.messageHandlers.get(messageChannel);
@@ -86,7 +85,7 @@ class EVMLogsTransport extends microservices_1.Server {
             if (log.address.toLowerCase() !== contract.address.toLowerCase())
                 continue;
             let topics = log.topics.join(',').split(',');
-            let iface = new ethers_1.default.Interface(contract.abi);
+            let iface = new ethers_1.Interface(contract.abi);
             let logParsed = iface.parseLog({ topics: topics, data: log.data });
             const logHandler = this.messageHandlers.get(`${contract.name}:${logParsed.name}`);
             await logHandler(logParsed);

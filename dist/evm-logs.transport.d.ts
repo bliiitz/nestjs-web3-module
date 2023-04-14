@@ -1,6 +1,6 @@
 import { CustomTransportStrategy, Server } from '@nestjs/microservices';
 import { Logger } from '@nestjs/common';
-import ethers from 'ethers';
+import { JsonRpcProvider, Log } from 'ethers';
 export interface IndexerConfig {
     evmRpc: string;
     startAtBlock: number;
@@ -16,7 +16,7 @@ export interface SyncState {
     block: number;
 }
 export declare class EVMLogsTransport extends Server implements CustomTransportStrategy {
-    rpc: ethers.JsonRpcProvider;
+    rpc: JsonRpcProvider;
     status: SyncState;
     config: IndexerConfig;
     logger: Logger;
@@ -26,6 +26,6 @@ export declare class EVMLogsTransport extends Server implements CustomTransportS
     close(): void;
     onNewBlock(blockNumber: number): Promise<void>;
     syncToCurrentBlock(currentBlock: number): Promise<number>;
-    parseLogs(log: ethers.Log): Promise<void>;
+    parseLogs(log: Log): Promise<void>;
     saveState(): Promise<void>;
 }
