@@ -61,7 +61,7 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
         this.logger.log(`Start sync from block ${this.status.block}...`)
 
         let loops = 2
-        while (loops < 2) {
+        while (loops >= 2) {
             let currentBlock = await this.rpc.getBlockNumber()
             this.logger.log(`Current block number: ${currentBlock}`)
             loops = await this.syncToCurrentBlock(currentBlock)
