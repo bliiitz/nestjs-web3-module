@@ -2,6 +2,7 @@ import { CustomTransportStrategy, MessageHandler, Server } from '@nestjs/microse
 
 import { Logger } from '@nestjs/common';
 import ethers from 'ethers';
+import { JsonRpcProvider } from 'ethers';
 
 export interface IndexerConfig {
     evmRpc: string
@@ -31,7 +32,7 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
     constructor(config: IndexerConfig) {
         super()
         this.config = config
-        this.rpc = new ethers.JsonRpcProvider(this.config.evmRpc)
+        this.rpc = new JsonRpcProvider(this.config.evmRpc)
     }
 
     async onMessage(messageChannel: string, ...args: any[]): Promise<any> {
