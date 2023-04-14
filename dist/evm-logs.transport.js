@@ -87,8 +87,10 @@ class EVMLogsTransport extends microservices_1.Server {
             let topics = log.topics.join(',').split(',');
             let iface = new ethers_1.Interface(contract.abi);
             let logParsed = iface.parseLog({ topics: topics, data: log.data });
-            this.logger.log("logParsed: ", logParsed);
-            this.logger.log('Log detected: ', `${contract.name}:${logParsed.name}`);
+            if (logParsed == null) {
+                this.logger.warn(`Event with topic ${topics[0]} not found...`);
+                continue;
+            }
             try {
                 const logHandler = this.messageHandlers.get(`${contract.name}:${logParsed.name}`);
                 await logHandler(logParsed);
