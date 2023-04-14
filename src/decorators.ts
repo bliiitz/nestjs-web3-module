@@ -6,3 +6,9 @@ export function HandleEVMLog(logPattern: string) {
 		MessagePattern(logPattern),
 	);
 }
+
+export function HandleSyncState(pattern: string) {
+	return applyDecorators(
+		MessagePattern(pattern),
+	);
+}
