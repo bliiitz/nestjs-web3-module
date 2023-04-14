@@ -93,19 +93,16 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
     async syncToCurrentBlock(currentBlock: number): Promise<number> {
         let loop = 0
         try {
-          this.logger.log("Synced block : ", this.status.block)
-          this.logger.log("Current block: ", currentBlock)
-    
           for (let blockNumber = this.status.block + 1; blockNumber < currentBlock; blockNumber+=this.config.blockBatchAmount) {
             loop += 1
             let toBlock = blockNumber + this.config.blockBatchAmount
-            this.logger.log(`Parsing from block ${blockNumber} to ${toBlock}, current block: ${currentBlock}, remaining blocks: ${currentBlock-blockNumber})`)
-              
             if(toBlock >= currentBlock){
                 toBlock = currentBlock
                 blockNumber = currentBlock
             }
 
+            this.logger.log(`Parsing from block ${blockNumber} to ${toBlock}, current block: ${currentBlock}, remaining blocks: ${currentBlock-blockNumber})`)
+              
             var filter = {
                 fromBlock: blockNumber,
                 toBlock
@@ -141,6 +138,7 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
             }
 
             try {
+                this.logger.debug(`Call handler for: ${contract.name}:${logParsed.name}`)
                 const logHandler: MessageHandler | undefined = this.messageHandlers.get(`${contract.name}:${logParsed.name}`);
                 await logHandler(logParsed)
             } catch (error) {
