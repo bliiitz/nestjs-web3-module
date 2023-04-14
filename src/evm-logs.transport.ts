@@ -135,10 +135,17 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
             let iface = new Interface(contract.abi);
             let logParsed = iface.parseLog({ topics: topics, data: log.data})
 
+            
             this.logger.log("logParsed: ", logParsed)
-            const logHandler: MessageHandler | undefined = this.messageHandlers.get(`${contract.name}:${logParsed.name}`);
             this.logger.log('Log detected: ', `${contract.name}:${logParsed.name}`)
-            await logHandler(logParsed)
+
+            try {
+                const logHandler: MessageHandler | undefined = this.messageHandlers.get(`${contract.name}:${logParsed.name}`);
+                await logHandler(logParsed)
+            } catch (error) {
+                this.logger.warn(`${contract.name}:${logParsed.name} handler not found...`)
+            }
+            
         }
     }
     
