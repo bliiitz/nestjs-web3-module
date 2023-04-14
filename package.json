@@ -4,7 +4,7 @@
   "description": "",
   "author": "",
   "private": true,
-  "type": "module",
+  "module": "commonjs",
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
