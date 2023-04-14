@@ -5,22 +5,12 @@ const microservices_1 = require("@nestjs/microservices");
 const common_1 = require("@nestjs/common");
 const ethers_1 = require("ethers");
 class EVMLogsTransport extends microservices_1.Server {
-    constructor(config) {
+    constructor(config, ctx) {
         super();
         this.logger = new common_1.Logger('EVMLogIndexer');
         this.config = config;
         this.rpc = new ethers_1.JsonRpcProvider(this.config.evmRpc);
-    }
-    async onMessage(messageChannel, ...args) {
-        const handler = this.messageHandlers.get(messageChannel);
-        if (handler) {
-            this.logger.debug(`Process message ${messageChannel}`);
-            const [ipcMainEventObject, payload] = args;
-            return await handler(payload, {
-                evt: ipcMainEventObject,
-            });
-        }
-        this.logger.warn(`No handlers for message ${messageChannel}`);
+        this.ctx = ctx;
     }
     async listen(callback) {
         this.logger.log("Loading current state...");
@@ -92,7 +82,7 @@ class EVMLogsTransport extends microservices_1.Server {
             try {
                 this.logger.debug(`Call handler for: ${contract.name}:${logParsed.name}`);
                 const logHandler = this.messageHandlers.get(`${contract.name}:${logParsed.name}`);
-                await logHandler(logParsed);
+                await logHandler(logParsed, this.ctx);
             }
             catch (error) {
                 this.logger.warn(`${contract.name}:${logParsed.name} handler not found...`);

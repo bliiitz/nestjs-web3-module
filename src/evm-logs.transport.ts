@@ -24,28 +24,17 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
 
     rpc: JsonRpcProvider
     status: SyncState
+    ctx: any
 
     config: IndexerConfig
     logger = new Logger('EVMLogIndexer');
 
-    constructor(config: IndexerConfig) {
+    constructor(config: IndexerConfig, ctx: any) {
         super()
         this.config = config
         this.rpc = new JsonRpcProvider(this.config.evmRpc)
+        this.ctx = ctx
     }
-
-    async onMessage(messageChannel: string, ...args: any[]): Promise<any> {
-		const handler: MessageHandler | undefined = this.messageHandlers.get(messageChannel);
-		if (handler) {
-			this.logger.debug(`Process message ${messageChannel}`);
-			const [ipcMainEventObject, payload] = args;
-			return await handler(payload, {
-				evt: ipcMainEventObject,
-			});
-		}
-
-		this.logger.warn(`No handlers for message ${messageChannel}`);
-	}
     
     /**
      * This method is triggered when you run "app.listen()".
@@ -140,7 +129,7 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
             try {
                 this.logger.debug(`Call handler for: ${contract.name}:${logParsed.name}`)
                 const logHandler: MessageHandler | undefined = this.messageHandlers.get(`${contract.name}:${logParsed.name}`);
-                await logHandler(logParsed)
+                await logHandler(logParsed, this.ctx)
             } catch (error) {
                 this.logger.warn(`${contract.name}:${logParsed.name} handler not found...`)
             }

@@ -18,10 +18,10 @@ export interface SyncState {
 export declare class EVMLogsTransport extends Server implements CustomTransportStrategy {
     rpc: JsonRpcProvider;
     status: SyncState;
+    ctx: any;
     config: IndexerConfig;
     logger: Logger;
-    constructor(config: IndexerConfig);
-    onMessage(messageChannel: string, ...args: any[]): Promise<any>;
+    constructor(config: IndexerConfig, ctx: any);
     listen(callback: () => void): Promise<void>;
     close(): void;
     onNewBlock(blockNumber: number): Promise<void>;
