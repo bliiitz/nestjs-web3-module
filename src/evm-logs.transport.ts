@@ -26,7 +26,7 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
     status: SyncState
 
     config: IndexerConfig
-    logger = new Logger('EVMLogTransport');
+    logger = new Logger('EVMLogIndexer');
 
     constructor(config: IndexerConfig) {
         super()
@@ -136,6 +136,7 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
             let logParsed = iface.parseLog({ topics: topics, data: log.data})
 
             const logHandler: MessageHandler | undefined = this.messageHandlers.get(`${contract.name}:${logParsed.name}`);
+            console.log('Log detected: ', `${contract.name}:${logParsed.name}`)
             await logHandler(logParsed)
         }
     }

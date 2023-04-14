@@ -7,7 +7,7 @@ const ethers_1 = require("ethers");
 class EVMLogsTransport extends microservices_1.Server {
     constructor(config) {
         super();
-        this.logger = new common_1.Logger('EVMLogTransport');
+        this.logger = new common_1.Logger('EVMLogIndexer');
         this.config = config;
         this.rpc = new ethers_1.JsonRpcProvider(this.config.evmRpc);
     }
@@ -88,6 +88,7 @@ class EVMLogsTransport extends microservices_1.Server {
             let iface = new ethers_1.Interface(contract.abi);
             let logParsed = iface.parseLog({ topics: topics, data: log.data });
             const logHandler = this.messageHandlers.get(`${contract.name}:${logParsed.name}`);
+            console.log('Log detected: ', `${contract.name}:${logParsed.name}`);
             await logHandler(logParsed);
         }
     }
