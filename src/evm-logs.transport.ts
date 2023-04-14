@@ -27,7 +27,7 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
     status: SyncState
 
     config: IndexerConfig
-    logger = new Logger();
+    logger = new Logger('EVMLogTransport');
 
     constructor(config: IndexerConfig) {
         super()
@@ -63,6 +63,7 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
         let loops = 2
         while (loops < 2) {
             let currentBlock = await this.rpc.getBlockNumber()
+            this.logger.log(`Current block number: ${currentBlock}`)
             loops = await this.syncToCurrentBlock(currentBlock)
         }
         

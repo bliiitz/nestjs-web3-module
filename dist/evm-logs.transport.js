@@ -8,7 +8,7 @@ const ethers_2 = require("ethers");
 class EVMLogsTransport extends microservices_1.Server {
     constructor(config) {
         super();
-        this.logger = new common_1.Logger();
+        this.logger = new common_1.Logger('EVMLogTransport');
         this.config = config;
         this.rpc = new ethers_2.JsonRpcProvider(this.config.evmRpc);
     }
@@ -31,6 +31,7 @@ class EVMLogsTransport extends microservices_1.Server {
         let loops = 2;
         while (loops < 2) {
             let currentBlock = await this.rpc.getBlockNumber();
+            this.logger.log(`Current block number: ${currentBlock}`);
             loops = await this.syncToCurrentBlock(currentBlock);
         }
         this.rpc.on('block', (blockNumber) => this.onNewBlock(blockNumber));
