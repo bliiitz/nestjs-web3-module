@@ -44,7 +44,7 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
         this.logger.log("Loading current state...")
 
         const handler: MessageHandler | undefined = this.messageHandlers.get('getSyncState');
-        this.status = await handler(undefined)
+        this.status = await handler(undefined, this.ctx)
 
         this.logger.log(`Start sync from block ${this.status.block}...`)
 
@@ -139,6 +139,6 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
     
     async saveState(): Promise<void> {
         const handler: MessageHandler | undefined = this.messageHandlers.get('setSyncState');
-        await handler(this.status)
+        await handler(this.status, this.ctx)
     }
 }
