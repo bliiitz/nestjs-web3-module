@@ -15,7 +15,7 @@ class EVMLogsTransport extends microservices_1.Server {
     async listen(callback) {
         this.logger.log("Loading current state...");
         const handler = this.messageHandlers.get('getSyncState');
-        this.status = await handler(undefined);
+        this.status = await handler(undefined, this.ctx);
         this.logger.log(`Start sync from block ${this.status.block}...`);
         let loops = 2;
         while (loops >= 2) {
@@ -72,26 +72,38 @@ class EVMLogsTransport extends microservices_1.Server {
         for (const contract of this.config.contracts) {
             if (log.address.toLowerCase() !== contract.address.toLowerCase())
                 continue;
-            let topics = log.topics.join(',').split(',');
-            let iface = new ethers_1.Interface(contract.abi);
-            let logParsed = iface.parseLog({ topics: topics, data: log.data });
-            if (logParsed == null) {
-                this.logger.warn(`Event with topic ${topics[0]} not found...`);
-                continue;
+            this.handleLog(contract, log);
+        }
+        for (const contract of this.config.dynamicContracts) {
+            let getDynamicContractList = this.messageHandlers.get(`${contract.name}:List`);
+            let addresses = await getDynamicContractList(undefined, this.ctx);
+            for (const address of addresses) {
+                if (log.address.toLowerCase() !== address.toLowerCase())
+                    continue;
+                this.handleLog(contract, log);
             }
-            try {
-                this.logger.debug(`Call handler for: ${contract.name}:${logParsed.name}`);
-                const logHandler = this.messageHandlers.get(`${contract.name}:${logParsed.name}`);
-                await logHandler(logParsed, this.ctx);
-            }
-            catch (error) {
-                this.logger.warn(`${contract.name}:${logParsed.name} handler not found...`);
-            }
+        }
+    }
+    async handleLog(contract, log) {
+        let topics = log.topics.join(',').split(',');
+        let iface = new ethers_1.Interface(contract.abi);
+        let logParsed = iface.parseLog({ topics: topics, data: log.data });
+        if (logParsed == null) {
+            this.logger.warn(`Event with topic ${topics[0]} not found...`);
+            return;
+        }
+        try {
+            this.logger.debug(`Call handler for: ${contract.name}:${logParsed.name}`);
+            const logHandler = this.messageHandlers.get(`${contract.name}:${logParsed.name}`);
+            await logHandler(logParsed, this.ctx);
+        }
+        catch (error) {
+            this.logger.warn(`${contract.name}:${logParsed.name} handler not found...`);
         }
     }
     async saveState() {
         const handler = this.messageHandlers.get('setSyncState');
-        await handler(this.status);
+        await handler(this.status, this.ctx);
     }
 }
 exports.EVMLogsTransport = EVMLogsTransport;

@@ -8,11 +8,17 @@ export interface IndexerConfig {
     startAtBlock: number
     blockBatchAmount: number
     contracts: ContractConfig[]
+    dynamicContracts: DynamicContractConfig[]
 }
 
 export interface ContractConfig {
     name: string,
     address: string,
+    abi: any
+}
+
+export interface DynamicContractConfig {
+    name: string,
     abi: any
 }
 
@@ -113,27 +119,43 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
     }
 
     async parseLogs(log: Log) {
+
         for (const contract of this.config.contracts) {
             if(log.address.toLowerCase() !== contract.address.toLowerCase())
                 continue
 
-            let topics: string[] = log.topics.join(',').split(',')
-            let iface = new Interface(contract.abi);
-            let logParsed = iface.parseLog({ topics: topics, data: log.data})
+            this.handleLog(contract, log)
+        }
 
-            if(logParsed == null) {
-                this.logger.warn(`Event with topic ${topics[0]} not found...`)
-                continue
-            }
+        for (const contract of this.config.dynamicContracts) {
+            let getDynamicContractList = this.messageHandlers.get(`${contract.name}:List`);
+            let addresses: string[] = await getDynamicContractList(undefined, this.ctx)
 
-            try {
-                this.logger.debug(`Call handler for: ${contract.name}:${logParsed.name}`)
-                const logHandler: MessageHandler | undefined = this.messageHandlers.get(`${contract.name}:${logParsed.name}`);
-                await logHandler(logParsed, this.ctx)
-            } catch (error) {
-                this.logger.warn(`${contract.name}:${logParsed.name} handler not found...`)
+            for (const address of addresses) {
+                if(log.address.toLowerCase() !== address.toLowerCase())
+                    continue
+
+                this.handleLog(contract, log)
             }
-            
+        }
+    }
+
+    async handleLog(contract: ContractConfig | DynamicContractConfig, log: Log) {
+        let topics: string[] = log.topics.join(',').split(',')
+        let iface = new Interface(contract.abi);
+        let logParsed = iface.parseLog({ topics: topics, data: log.data})
+
+        if(logParsed == null) {
+            this.logger.warn(`Event with topic ${topics[0]} not found...`)
+            return
+        }
+
+        try {
+            this.logger.debug(`Call handler for: ${contract.name}:${logParsed.name}`)
+            const logHandler: MessageHandler | undefined = this.messageHandlers.get(`${contract.name}:${logParsed.name}`);
+            await logHandler(logParsed, this.ctx)
+        } catch (error) {
+            this.logger.warn(`${contract.name}:${logParsed.name} handler not found...`)
         }
     }
     

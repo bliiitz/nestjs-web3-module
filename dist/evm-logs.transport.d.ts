@@ -6,10 +6,15 @@ export interface IndexerConfig {
     startAtBlock: number;
     blockBatchAmount: number;
     contracts: ContractConfig[];
+    dynamicContracts: DynamicContractConfig[];
 }
 export interface ContractConfig {
     name: string;
     address: string;
+    abi: any;
+}
+export interface DynamicContractConfig {
+    name: string;
     abi: any;
 }
 export interface SyncState {
@@ -27,5 +32,6 @@ export declare class EVMLogsTransport extends Server implements CustomTransportS
     onNewBlock(blockNumber: number): Promise<void>;
     syncToCurrentBlock(currentBlock: number): Promise<number>;
     parseLogs(log: Log): Promise<void>;
+    handleLog(contract: ContractConfig | DynamicContractConfig, log: Log): Promise<void>;
     saveState(): Promise<void>;
 }

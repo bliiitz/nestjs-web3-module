@@ -12,3 +12,9 @@ export function HandleSyncState(pattern: string) {
 		MessagePattern(pattern),
 	);
 }
+
+export function HandleGetDynamicContractList(pattern: string) {
+	return applyDecorators(
+		MessagePattern(pattern),
+	);
+}
