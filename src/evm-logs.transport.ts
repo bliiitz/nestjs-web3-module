@@ -104,6 +104,7 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
             };
 
             var logs = await this.rpc.getLogs(filter);
+            console.log("logs length: ", logs.length)
             for (const log of logs) {
                 await this.parseLogs(log)
             }
@@ -118,14 +119,14 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
         return loop
     }
 
-    async parseLogs(log: Log) {
-
+    async parseLogs(log: Log): Promise<void> {
+        console.log(log)
         for (const contract of this.config.contracts) {
             if(log.address.toLowerCase() !== contract.address.toLowerCase())
                 continue
-            console.log(log)
+            
             await this.handleLog(contract, log)
-            break
+            return
         }
 
         for (const contract of this.config.dynamicContracts) {
@@ -137,7 +138,7 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
                     continue
 
                 await this.handleLog(contract, log)
-                break
+                return
             }
         }
     }
