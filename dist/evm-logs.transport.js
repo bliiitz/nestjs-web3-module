@@ -46,10 +46,8 @@ class EVMLogsTransport extends microservices_1.Server {
             for (let blockNumber = this.status.block + 1; blockNumber < currentBlock; blockNumber += this.config.blockBatchAmount) {
                 loop += 1;
                 let toBlock = blockNumber + this.config.blockBatchAmount;
-                if (toBlock >= currentBlock) {
+                if (toBlock >= currentBlock)
                     toBlock = currentBlock;
-                    blockNumber = currentBlock;
-                }
                 this.logger.log(`Parsing from block ${blockNumber} to ${toBlock}, current block: ${currentBlock}, remaining blocks: ${currentBlock - blockNumber})`);
                 var filter = {
                     fromBlock: blockNumber,
