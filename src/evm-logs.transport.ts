@@ -107,7 +107,17 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
 
             var logs = await this.rpc.getLogs(filter);
             console.log("logs length: ", logs.length)
+            let actualBlock = blockNumber
+            const blockParsingEndedHandler: MessageHandler | undefined = this.messageHandlers.get("blockParsingEnded");
+
             for (const log of logs) {
+                if(log.blockNumber > actualBlock) {
+                    if(blockParsingEndedHandler !== undefined)
+                        await blockParsingEndedHandler({block: blockNumber - 1}, this.ctx)
+
+                    actualBlock = blockNumber
+                }
+
                 await this.parseLogs(log)
             }
             
