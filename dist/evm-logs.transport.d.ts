@@ -1,4 +1,5 @@
 import { CustomTransportStrategy, Server } from '@nestjs/microservices';
+import Bottleneck from "bottleneck";
 import { Logger } from '@nestjs/common';
 import { JsonRpcProvider, Log } from 'ethers';
 export interface IndexerConfig {
@@ -27,6 +28,7 @@ export declare class EVMLogsTransport extends Server implements CustomTransportS
     ctx: any;
     config: IndexerConfig;
     logger: Logger;
+    limiter: Bottleneck;
     constructor(config: IndexerConfig, ctx: any);
     listen(callback: () => void): Promise<void>;
     close(): void;

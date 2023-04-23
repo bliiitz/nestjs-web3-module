@@ -2,12 +2,16 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EVMLogsTransport = void 0;
 const microservices_1 = require("@nestjs/microservices");
+const bottleneck_1 = require("bottleneck");
 const common_1 = require("@nestjs/common");
 const ethers_1 = require("ethers");
 class EVMLogsTransport extends microservices_1.Server {
     constructor(config, ctx) {
         super();
         this.logger = new common_1.Logger('EVMLogIndexer');
+        this.limiter = new bottleneck_1.default({
+            maxConcurrent: 1
+        });
         this.config = config;
         this.rpc = new ethers_1.JsonRpcProvider(this.config.evmRpc);
         this.ctx = ctx;
@@ -23,7 +27,7 @@ class EVMLogsTransport extends microservices_1.Server {
             this.logger.log(`Current block number: ${currentBlock}`);
             loops = await this.syncToCurrentBlock(currentBlock);
         }
-        this.rpc.on('block', (blockNumber) => this.onNewBlock(blockNumber));
+        this.rpc.on('block', (blockNumber) => this.limiter.schedule(() => this.onNewBlock(blockNumber)));
         callback();
     }
     close() {
@@ -35,8 +39,6 @@ class EVMLogsTransport extends microservices_1.Server {
             fromBlock: this.status.block + 1,
             toBlock: blockNumber
         };
-        console.log("currentBlock: ", this.status.block);
-        console.log("filter: ", filter);
         var logs = await this.rpc.getLogs(filter);
         for (const log of logs) {
             await this.parseLog(log);

@@ -1,5 +1,5 @@
 import { CustomTransportStrategy, MessageHandler, Server } from '@nestjs/microservices';
-
+import Bottleneck from "bottleneck";
 import { Logger } from '@nestjs/common';
 import { JsonRpcProvider, Log, Interface } from 'ethers';
 
@@ -36,6 +36,10 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
     config: IndexerConfig
     logger = new Logger('EVMLogIndexer');
 
+    limiter = new Bottleneck({
+        maxConcurrent: 1
+    });
+
     constructor(config: IndexerConfig, ctx: any) {
         super()
         this.config = config
@@ -62,7 +66,7 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
             loops = await this.syncToCurrentBlock(currentBlock)
         }
         
-        this.rpc.on('block', (blockNumber) => this.onNewBlock(blockNumber))
+        this.rpc.on('block', (blockNumber) => this.limiter.schedule(() => this.onNewBlock(blockNumber)))
         callback();
     }
 
@@ -79,9 +83,6 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
             fromBlock: this.status.block + 1,
             toBlock: blockNumber
         };
-
-        console.log("currentBlock: ", this.status.block)
-        console.log("filter: ", filter)
 
         var logs = await this.rpc.getLogs(filter);
         for (const log of logs) {

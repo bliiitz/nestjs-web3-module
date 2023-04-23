@@ -28,6 +28,7 @@
     "@nestjs/graphql": "^11.0.5",
     "@nestjs/microservices": "^9.4.0",
     "@nestjs/platform-express": "^9.0.0",
+    "bottleneck": "^2.19.5",
     "ethers": "^6.3.0",
     "graphql": "^16.6.0",
     "reflect-metadata": "^0.1.13",
