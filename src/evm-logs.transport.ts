@@ -111,9 +111,11 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
             const blockParsingEndedHandler: MessageHandler | undefined = this.messageHandlers.get("blockParsingEnded");
 
             for (const log of logs) {
+                console.log("log.block:", log.blockNumber)
+                console.log("actualBlock:", actualBlock)
                 if(log.blockNumber > actualBlock) {
                     if(blockParsingEndedHandler !== undefined)
-                        await blockParsingEndedHandler({block: blockNumber - 1}, this.ctx)
+                        await blockParsingEndedHandler({block: log.blockNumber - 1}, this.ctx)
 
                     actualBlock = blockNumber
                 }
