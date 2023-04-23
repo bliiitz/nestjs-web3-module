@@ -89,7 +89,9 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
     }
 
     async syncToCurrentBlock(currentBlock: number): Promise<number> {
+        const blockParsingEndedHandler: MessageHandler | undefined = this.messageHandlers.get("blockParsingEnded");
         let loop = 0
+        
         try {
           for (let blockNumber = this.status.block + 1; blockNumber < currentBlock; blockNumber+=this.config.blockBatchAmount) {
             loop += 1
@@ -108,7 +110,7 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
             var logs = await this.rpc.getLogs(filter);
             console.log("logs length: ", logs.length)
             let actualBlock: number = blockNumber
-            const blockParsingEndedHandler: MessageHandler | undefined = this.messageHandlers.get("blockParsingEnded");
+            
 
             for (const log of logs) {
                 console.log("log.block:", log.blockNumber)
@@ -128,6 +130,9 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
         } catch (error) {
             console.error(error)
         }
+
+        if(blockParsingEndedHandler !== undefined)
+            await blockParsingEndedHandler({block: currentBlock}, this.ctx)
 
         return loop
     }

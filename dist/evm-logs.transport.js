@@ -43,6 +43,7 @@ class EVMLogsTransport extends microservices_1.Server {
         }
     }
     async syncToCurrentBlock(currentBlock) {
+        const blockParsingEndedHandler = this.messageHandlers.get("blockParsingEnded");
         let loop = 0;
         try {
             for (let blockNumber = this.status.block + 1; blockNumber < currentBlock; blockNumber += this.config.blockBatchAmount) {
@@ -58,7 +59,6 @@ class EVMLogsTransport extends microservices_1.Server {
                 var logs = await this.rpc.getLogs(filter);
                 console.log("logs length: ", logs.length);
                 let actualBlock = blockNumber;
-                const blockParsingEndedHandler = this.messageHandlers.get("blockParsingEnded");
                 for (const log of logs) {
                     console.log("log.block:", log.blockNumber);
                     console.log("actualBlock:", actualBlock);
@@ -76,6 +76,8 @@ class EVMLogsTransport extends microservices_1.Server {
         catch (error) {
             console.error(error);
         }
+        if (blockParsingEndedHandler !== undefined)
+            await blockParsingEndedHandler({ block: currentBlock }, this.ctx);
         return loop;
     }
     async parseLogs(log) {
