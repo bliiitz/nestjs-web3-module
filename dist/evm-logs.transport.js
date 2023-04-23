@@ -63,9 +63,9 @@ class EVMLogsTransport extends microservices_1.Server {
                     console.log("log.block:", log.blockNumber);
                     console.log("actualBlock:", actualBlock);
                     if (log.blockNumber > actualBlock) {
+                        actualBlock = log.blockNumber;
                         if (blockParsingEndedHandler !== undefined)
-                            await blockParsingEndedHandler({ block: log.blockNumber - 1 }, this.ctx);
-                        actualBlock = blockNumber;
+                            await blockParsingEndedHandler({ block: actualBlock - 1 }, this.ctx);
                     }
                     await this.parseLogs(log);
                 }
