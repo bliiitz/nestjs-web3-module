@@ -35,6 +35,8 @@ class EVMLogsTransport extends microservices_1.Server {
             fromBlock: this.status.block + 1,
             toBlock: blockNumber
         };
+        console.log("currentBlock: ", this.status.block);
+        console.log("filter: ", filter);
         var logs = await this.rpc.getLogs(filter);
         for (const log of logs) {
             await this.parseLogs(log);
