@@ -89,7 +89,7 @@ class EVMLogsTransport extends microservices_1.Server {
         let iface = new ethers_1.Interface(contract.abi);
         let logParsed = iface.parseLog({ topics: topics, data: log.data });
         if (logParsed == null) {
-            this.logger.warn(`Event with topic ${topics[0]} not found...`);
+            this.logger.warn(`Event with topic ${topics[0]} not found on ${contract.name}...`);
             return;
         }
         try {
