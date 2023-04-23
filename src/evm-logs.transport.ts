@@ -123,8 +123,9 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
         for (const contract of this.config.contracts) {
             if(log.address.toLowerCase() !== contract.address.toLowerCase())
                 continue
-
+            console.log(log)
             await this.handleLog(contract, log)
+            break
         }
 
         for (const contract of this.config.dynamicContracts) {
@@ -136,6 +137,7 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
                     continue
 
                 await this.handleLog(contract, log)
+                break
             }
         }
     }
