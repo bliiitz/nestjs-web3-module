@@ -56,6 +56,7 @@ class EVMLogsTransport extends microservices_1.Server {
                     toBlock
                 };
                 var logs = await this.rpc.getLogs(filter);
+                console.log("logs length: ", logs.length);
                 for (const log of logs) {
                     await this.parseLogs(log);
                 }
@@ -69,12 +70,12 @@ class EVMLogsTransport extends microservices_1.Server {
         return loop;
     }
     async parseLogs(log) {
+        console.log(log);
         for (const contract of this.config.contracts) {
             if (log.address.toLowerCase() !== contract.address.toLowerCase())
                 continue;
-            console.log(log);
             await this.handleLog(contract, log);
-            break;
+            return;
         }
         for (const contract of this.config.dynamicContracts) {
             let getDynamicContractList = this.messageHandlers.get(`${contract.name}:List`);
@@ -83,7 +84,7 @@ class EVMLogsTransport extends microservices_1.Server {
                 if (log.address.toLowerCase() !== address.toLowerCase())
                     continue;
                 await this.handleLog(contract, log);
-                break;
+                return;
             }
         }
     }
