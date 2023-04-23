@@ -24,6 +24,7 @@ export interface DynamicContractConfig {
 
 export interface SyncState {
     block: number
+    logIndex: number
 }
 
 export class EVMLogsTransport extends Server implements CustomTransportStrategy {
@@ -84,7 +85,7 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
 
         var logs = await this.rpc.getLogs(filter);
         for (const log of logs) {
-            await this.parseLogs(log)
+            await this.parseLog(log)
         }
     }
 
@@ -93,7 +94,7 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
         let loop = 0
         
         try {
-          for (let blockNumber = this.status.block + 1; blockNumber < currentBlock; blockNumber+=this.config.blockBatchAmount) {
+          for (let blockNumber = this.status.block; blockNumber < currentBlock; blockNumber+=this.config.blockBatchAmount) {
             loop += 1
             let toBlock = blockNumber + this.config.blockBatchAmount
             if(toBlock >= currentBlock)
@@ -108,23 +109,24 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
             };
 
             var logs = await this.rpc.getLogs(filter);
-            console.log("logs length: ", logs.length)
             let actualBlock: number = blockNumber
             
 
             for (const log of logs) {
-                console.log("log.block:", log.blockNumber)
-                console.log("actualBlock:", actualBlock)
                 if(log.blockNumber > actualBlock) {
                     actualBlock = log.blockNumber
                     if(blockParsingEndedHandler !== undefined)
                         await blockParsingEndedHandler({block: actualBlock - 1}, this.ctx)
                 }
 
-                await this.parseLogs(log)
+                if(log.index <= this.status.logIndex && log.blockNumber == this.status.block)
+                    continue
+
+                await this.parseLog(log)
             }
-            
+
             this.status.block = toBlock
+            this.status.logIndex = 1_000_000
             await this.saveState()
           }
         } catch (error) {
@@ -137,13 +139,15 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
         return loop
     }
 
-    async parseLogs(log: Log): Promise<void> {
-        console.log(log)
+    async parseLog(log: Log): Promise<void> {
         for (const contract of this.config.contracts) {
             if(log.address.toLowerCase() !== contract.address.toLowerCase())
                 continue
             
             await this.handleLog(contract, log)
+            this.status.block = log.blockNumber
+            this.status.logIndex = log.index
+            await this.saveState()
             return
         }
 
@@ -156,6 +160,9 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
                     continue
 
                 await this.handleLog(contract, log)
+                this.status.block = log.blockNumber
+                this.status.logIndex = log.index
+                await this.saveState()
                 return
             }
         }

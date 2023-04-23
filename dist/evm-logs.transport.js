@@ -39,14 +39,14 @@ class EVMLogsTransport extends microservices_1.Server {
         console.log("filter: ", filter);
         var logs = await this.rpc.getLogs(filter);
         for (const log of logs) {
-            await this.parseLogs(log);
+            await this.parseLog(log);
         }
     }
     async syncToCurrentBlock(currentBlock) {
         const blockParsingEndedHandler = this.messageHandlers.get("blockParsingEnded");
         let loop = 0;
         try {
-            for (let blockNumber = this.status.block + 1; blockNumber < currentBlock; blockNumber += this.config.blockBatchAmount) {
+            for (let blockNumber = this.status.block; blockNumber < currentBlock; blockNumber += this.config.blockBatchAmount) {
                 loop += 1;
                 let toBlock = blockNumber + this.config.blockBatchAmount;
                 if (toBlock >= currentBlock)
@@ -57,19 +57,19 @@ class EVMLogsTransport extends microservices_1.Server {
                     toBlock
                 };
                 var logs = await this.rpc.getLogs(filter);
-                console.log("logs length: ", logs.length);
                 let actualBlock = blockNumber;
                 for (const log of logs) {
-                    console.log("log.block:", log.blockNumber);
-                    console.log("actualBlock:", actualBlock);
                     if (log.blockNumber > actualBlock) {
                         actualBlock = log.blockNumber;
                         if (blockParsingEndedHandler !== undefined)
                             await blockParsingEndedHandler({ block: actualBlock - 1 }, this.ctx);
                     }
-                    await this.parseLogs(log);
+                    if (log.index <= this.status.logIndex && log.blockNumber == this.status.block)
+                        continue;
+                    await this.parseLog(log);
                 }
                 this.status.block = toBlock;
+                this.status.logIndex = 1000000;
                 await this.saveState();
             }
         }
@@ -80,12 +80,14 @@ class EVMLogsTransport extends microservices_1.Server {
             await blockParsingEndedHandler({ block: currentBlock }, this.ctx);
         return loop;
     }
-    async parseLogs(log) {
-        console.log(log);
+    async parseLog(log) {
         for (const contract of this.config.contracts) {
             if (log.address.toLowerCase() !== contract.address.toLowerCase())
                 continue;
             await this.handleLog(contract, log);
+            this.status.block = log.blockNumber;
+            this.status.logIndex = log.index;
+            await this.saveState();
             return;
         }
         for (const contract of this.config.dynamicContracts) {
@@ -95,6 +97,9 @@ class EVMLogsTransport extends microservices_1.Server {
                 if (log.address.toLowerCase() !== address.toLowerCase())
                     continue;
                 await this.handleLog(contract, log);
+                this.status.block = log.blockNumber;
+                this.status.logIndex = log.index;
+                await this.saveState();
                 return;
             }
         }

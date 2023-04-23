@@ -19,6 +19,7 @@ export interface DynamicContractConfig {
 }
 export interface SyncState {
     block: number;
+    logIndex: number;
 }
 export declare class EVMLogsTransport extends Server implements CustomTransportStrategy {
     rpc: JsonRpcProvider;
@@ -31,7 +32,7 @@ export declare class EVMLogsTransport extends Server implements CustomTransportS
     close(): void;
     onNewBlock(blockNumber: number): Promise<void>;
     syncToCurrentBlock(currentBlock: number): Promise<number>;
-    parseLogs(log: Log): Promise<void>;
+    parseLog(log: Log): Promise<void>;
     handleLog(contract: ContractConfig | DynamicContractConfig, log: Log): Promise<void>;
     saveState(): Promise<void>;
 }
