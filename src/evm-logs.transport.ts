@@ -143,10 +143,10 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
     async handleLog(contract: ContractConfig | DynamicContractConfig, log: Log) {
         let topics: string[] = log.topics.join(',').split(',')
         let iface = new Interface(contract.abi);
-        let logParsed = iface.parseLog({ topics: topics, data: log.data})
+        let logParsed = iface.parseLog({ topics: topics, data: log.data })
 
         if(logParsed == null) {
-            this.logger.warn(`Event with topic ${topics[0]} not found...`)
+            this.logger.warn(`Event with topic ${topics[0]} not found on ${contract.name}...`)
             return
         }
 
