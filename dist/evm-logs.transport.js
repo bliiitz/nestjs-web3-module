@@ -99,7 +99,7 @@ class EVMLogsTransport extends microservices_1.Server {
         try {
             this.logger.debug(`Call handler for: ${contract.name}:${logParsed.name}`);
             const logHandler = this.messageHandlers.get(`${contract.name}:${logParsed.name}`);
-            await logHandler(logParsed, this.ctx);
+            await logHandler({ address: log.address, log: logParsed }, this.ctx);
         }
         catch (error) {
             this.logger.warn(`${contract.name}:${logParsed.name} handler not found...`);
