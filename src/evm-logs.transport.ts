@@ -1,7 +1,7 @@
 import { CustomTransportStrategy, MessageHandler, Server } from '@nestjs/microservices';
 import Bottleneck from "bottleneck";
 import { Logger } from '@nestjs/common';
-import { JsonRpcProvider, Log, Interface } from 'ethers';
+import { providers, utils } from 'ethers';
 
 export interface IndexerConfig {
     evmRpc: string
@@ -27,9 +27,16 @@ export interface SyncState {
     logIndex: number
 }
 
+export interface EVMLog<T> {
+    address: string
+    blockNumber: number
+    index: number
+    data: T
+}
+
 export class EVMLogsTransport extends Server implements CustomTransportStrategy {
 
-    rpc: JsonRpcProvider
+    rpc: providers.JsonRpcProvider
     status: SyncState
     ctx: any
 
@@ -43,8 +50,13 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
     constructor(config: IndexerConfig, ctx: any) {
         super()
         this.config = config
-        this.rpc = new JsonRpcProvider(this.config.evmRpc)
+        this.rpc = new providers.JsonRpcProvider(this.config.evmRpc)
         this.ctx = ctx
+
+        this.limiter.on('error', function (error) {
+            this.logger.error(error)
+            process.exit(1)
+        })
     }
     
     /**
@@ -111,16 +123,16 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
 
             var logs = await this.rpc.getLogs(filter);
             let actualBlock: number = blockNumber
-            
-
+           
             for (const log of logs) {
+
                 if(log.blockNumber > actualBlock) {
                     actualBlock = log.blockNumber
                     if(blockParsingEndedHandler !== undefined)
                         await blockParsingEndedHandler({block: actualBlock - 1}, this.ctx)
                 }
 
-                if(log.index <= this.status.logIndex && log.blockNumber == this.status.block)
+                if(log.logIndex <= this.status.logIndex && log.blockNumber == this.status.block)
                     continue
 
                 await this.parseLog(log)
@@ -140,14 +152,14 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
         return loop
     }
 
-    async parseLog(log: Log): Promise<void> {
+    async parseLog(log: providers.Log): Promise<void> {
         for (const contract of this.config.contracts) {
             if(log.address.toLowerCase() !== contract.address.toLowerCase())
                 continue
             
             await this.handleLog(contract, log)
             this.status.block = log.blockNumber
-            this.status.logIndex = log.index
+            this.status.logIndex = log.logIndex
             await this.saveState()
             return
         }
@@ -162,27 +174,41 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
 
                 await this.handleLog(contract, log)
                 this.status.block = log.blockNumber
-                this.status.logIndex = log.index
+                this.status.logIndex = log.logIndex
                 await this.saveState()
                 return
             }
         }
     }
 
-    async handleLog(contract: ContractConfig | DynamicContractConfig, log: Log) {
+    async handleLog(contract: ContractConfig | DynamicContractConfig, log: providers.Log) {
         let topics: string[] = log.topics.join(',').split(',')
-        let iface = new Interface(contract.abi);
-        let logParsed = iface.parseLog({ topics: topics, data: log.data })
+        let iface = new utils.Interface(contract.abi);
 
-        if(logParsed == null) {
+        let logParsed
+        try {
+            logParsed = iface.parseLog({ topics: topics, data: log.data })
+        } catch {
             this.logger.warn(`Event with topic ${topics[0]} not found on ${contract.name}...`)
             return
+        }
+
+        const args: any = {};
+        logParsed.eventFragment.inputs.forEach((input, index) => {
+            args[input.name] = logParsed.args[index];
+        });
+        
+        let evmLog: EVMLog<any> = {
+            address: log.address,
+            blockNumber: log.blockNumber,
+            index: log.logIndex,
+            data: args
         }
 
         try {
             this.logger.debug(`Call handler for: ${contract.name}:${logParsed.name}`)
             const logHandler: MessageHandler | undefined = this.messageHandlers.get(`${contract.name}:${logParsed.name}`);
-            await logHandler({address: log.address, log: logParsed}, this.ctx)
+            await logHandler(evmLog, this.ctx)
         } catch (error) {
             this.logger.warn(`${contract.name}:${logParsed.name} handler not found...`)
         }

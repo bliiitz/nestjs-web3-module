@@ -13,8 +13,12 @@ class EVMLogsTransport extends microservices_1.Server {
             maxConcurrent: 1
         });
         this.config = config;
-        this.rpc = new ethers_1.JsonRpcProvider(this.config.evmRpc);
+        this.rpc = new ethers_1.providers.JsonRpcProvider(this.config.evmRpc);
         this.ctx = ctx;
+        this.limiter.on('error', function (error) {
+            this.logger.error(error);
+            process.exit(1);
+        });
     }
     async listen(callback) {
         this.logger.log("Loading current state...");
@@ -66,7 +70,7 @@ class EVMLogsTransport extends microservices_1.Server {
                         if (blockParsingEndedHandler !== undefined)
                             await blockParsingEndedHandler({ block: actualBlock - 1 }, this.ctx);
                     }
-                    if (log.index <= this.status.logIndex && log.blockNumber == this.status.block)
+                    if (log.logIndex <= this.status.logIndex && log.blockNumber == this.status.block)
                         continue;
                     await this.parseLog(log);
                 }
@@ -88,7 +92,7 @@ class EVMLogsTransport extends microservices_1.Server {
                 continue;
             await this.handleLog(contract, log);
             this.status.block = log.blockNumber;
-            this.status.logIndex = log.index;
+            this.status.logIndex = log.logIndex;
             await this.saveState();
             return;
         }
@@ -100,7 +104,7 @@ class EVMLogsTransport extends microservices_1.Server {
                     continue;
                 await this.handleLog(contract, log);
                 this.status.block = log.blockNumber;
-                this.status.logIndex = log.index;
+                this.status.logIndex = log.logIndex;
                 await this.saveState();
                 return;
             }
@@ -108,16 +112,29 @@ class EVMLogsTransport extends microservices_1.Server {
     }
     async handleLog(contract, log) {
         let topics = log.topics.join(',').split(',');
-        let iface = new ethers_1.Interface(contract.abi);
-        let logParsed = iface.parseLog({ topics: topics, data: log.data });
-        if (logParsed == null) {
+        let iface = new ethers_1.utils.Interface(contract.abi);
+        let logParsed;
+        try {
+            logParsed = iface.parseLog({ topics: topics, data: log.data });
+        }
+        catch (_a) {
             this.logger.warn(`Event with topic ${topics[0]} not found on ${contract.name}...`);
             return;
         }
+        const args = {};
+        logParsed.eventFragment.inputs.forEach((input, index) => {
+            args[input.name] = logParsed.args[index];
+        });
+        let evmLog = {
+            address: log.address,
+            blockNumber: log.blockNumber,
+            index: log.logIndex,
+            data: args
+        };
         try {
             this.logger.debug(`Call handler for: ${contract.name}:${logParsed.name}`);
             const logHandler = this.messageHandlers.get(`${contract.name}:${logParsed.name}`);
-            await logHandler({ address: log.address, log: logParsed }, this.ctx);
+            await logHandler(evmLog, this.ctx);
         }
         catch (error) {
             this.logger.warn(`${contract.name}:${logParsed.name} handler not found...`);
