@@ -208,9 +208,13 @@ export class EVMLogsTransport extends Server implements CustomTransportStrategy 
         try {
             this.logger.debug(`Call handler for: ${contract.name}:${logParsed.name}`)
             const logHandler: MessageHandler | undefined = this.messageHandlers.get(`${contract.name}:${logParsed.name}`);
-            await logHandler(evmLog, this.ctx)
+            if(logHandler)
+                await logHandler(evmLog, this.ctx)
+            else
+                this.logger.warn(`${contract.name}:${logParsed.name} handler not found...`)
         } catch (error) {
-            this.logger.warn(`${contract.name}:${logParsed.name} handler not found...`)
+            this.logger.error(error)
+            process.exit(1)
         }
     }
     
